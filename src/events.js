@@ -5,6 +5,7 @@ const isClick = require('./lib/is_click');
 const isTap = require('./lib/is_tap');
 const Constants = require('./constants');
 const objectToMode = require('./modes/object_to_mode');
+const PerspectiveMercatorViewport = require('viewport-mercator-project').PerspectiveMercatorViewport;
 
 module.exports = function(ctx) {
 
@@ -40,7 +41,13 @@ module.exports = function(ctx) {
   };
 
   events.mousemove = function(event) {
-    const button = event.originalEvent.buttons !== undefined ? event.originalEvent.buttons : event.originalEvent.which;
+    let originalEvent;
+    if (event.originalEvent) {
+      originalEvent = event.originalEvent;
+    } else if (event.srcEvent) {
+      originalEvent = event.srcEvent;
+    }
+    const button = originalEvent.buttons !== undefined ? originalEvent.buttons : originalEvent.which;
     if (button === 1) {
       return events.mousedrag(event);
     }
@@ -218,38 +225,109 @@ module.exports = function(ctx) {
         events[name](event);
       }
     },
+
+    getMapboxEvent: function(handler) {
+      return function(e) {
+        const {offsetCenter: {x, y}} = e;
+        const pos = [x, y];
+        let lngLat;
+        if (ctx.getViewport()) {
+          const viewport = new PerspectiveMercatorViewport(ctx.getViewport());
+          lngLat = viewport.unproject(pos);
+        }
+
+        const mapboxEvent = {
+          originalEvent: e.srcEvent,
+          reactMapGLEvent: e,
+          point: {x, y},
+          lngLat: {
+            lng: lngLat[0],
+            lat: lngLat[1]
+          }
+        };
+        handler(mapboxEvent);
+      };
+    },
+
     addEventListeners: function() {
-      ctx.map.on('mousemove', events.mousemove);
-      ctx.map.on('mousedown', events.mousedown);
-      ctx.map.on('mouseup', events.mouseup);
+      if (ctx.eventManager) {
+        ctx.mousemove = this.getMapboxEvent(events.mousemove);
+        ctx.eventManager.on('mousemove', ctx.mousemove);
+
+        ctx.mousedown = this.getMapboxEvent(events.mousedown);
+        ctx.eventManager.on('mousedown', ctx.mousedown);
+
+        ctx.mouseup = this.getMapboxEvent(events.mouseup);
+        ctx.eventManager.on('mouseup', ctx.mouseup);
+
+        ctx.touchmove = this.getMapboxEvent(events.touchmove);
+        ctx.eventManager.on('touchmove', ctx.touchmove);
+
+        ctx.touchstart = this.getMapboxEvent(events.touchstart);
+        ctx.eventManager.on('touchstart', ctx.touchstart);
+
+        ctx.touchend = this.getMapboxEvent(events.touchend);
+        ctx.eventManager.on('touchend', ctx.touchend);
+
+      } else {
+        ctx.map.on('mousemove', events.mousemove);
+        ctx.map.on('mousedown', events.mousedown);
+        ctx.map.on('mouseup', events.mouseup);
+        ctx.map.on('touchmove', events.touchmove);
+        ctx.map.on('touchstart', events.touchstart);
+        ctx.map.on('touchend', events.touchend);
+      }
+
+      //data event always comes from map
       ctx.map.on('data', events.data);
 
-      ctx.map.on('touchmove', events.touchmove);
-      ctx.map.on('touchstart', events.touchstart);
-      ctx.map.on('touchend', events.touchend);
+      if (ctx.eventContainer) {
+        ctx.eventContainer.addEventListener('mouseout', events.mouseout);
 
-      ctx.container.addEventListener('mouseout', events.mouseout);
+        if (ctx.options.keybindings) {
+          ctx.eventContainer.addEventListener('keydown', events.keydown);
+          ctx.eventContainer.addEventListener('keyup', events.keyup);
+        }
+      } else {
+        ctx.container.addEventListener('mouseout', events.mouseout);
 
-      if (ctx.options.keybindings) {
-        ctx.container.addEventListener('keydown', events.keydown);
-        ctx.container.addEventListener('keyup', events.keyup);
+        if (ctx.options.keybindings) {
+          ctx.container.addEventListener('keydown', events.keydown);
+          ctx.container.addEventListener('keyup', events.keyup);
+        }
       }
     },
     removeEventListeners: function() {
-      ctx.map.off('mousemove', events.mousemove);
-      ctx.map.off('mousedown', events.mousedown);
-      ctx.map.off('mouseup', events.mouseup);
+      if (ctx.eventManager) {
+        ctx.eventManager.off('mousemove', ctx.mousemove);
+        ctx.eventManager.off('mousedown', ctx.mousedown);
+        ctx.eventManager.off('mouseup', ctx.mouseup);
+        ctx.eventManager.off('touchmove', ctx.touchmove);
+        ctx.eventManager.off('touchstart', ctx.touchstart);
+        ctx.eventManager.off('touchend', ctx.touchend);
+      } else {
+        ctx.map.off('mousemove', events.mousemove);
+        ctx.map.off('mousedown', events.mousedown);
+        ctx.map.off('mouseup', events.mouseup);
+        ctx.map.off('touchmove', events.touchmove);
+        ctx.map.off('touchstart', events.touchstart);
+        ctx.map.off('touchend', events.touchend);
+      }
+
       ctx.map.off('data', events.data);
 
-      ctx.map.off('touchmove', events.touchmove);
-      ctx.map.off('touchstart', events.touchstart);
-      ctx.map.off('touchend', events.touchend);
-
-      ctx.container.removeEventListener('mouseout', events.mouseout);
-
-      if (ctx.options.keybindings) {
-        ctx.container.removeEventListener('keydown', events.keydown);
-        ctx.container.removeEventListener('keyup', events.keyup);
+      if (ctx.eventContainer) {
+        ctx.eventContainer.removeEventListener('mouseout', events.mouseout);
+        if (ctx.options.keybindings) {
+          ctx.eventContainer.removeEventListener('keydown', events.keydown);
+          ctx.eventContainer.removeEventListener('keyup', events.keyup);
+        }
+      } else {
+        ctx.container.removeEventListener('mouseout', events.mouseout);
+        if (ctx.options.keybindings) {
+          ctx.container.removeEventListener('keydown', events.keydown);
+          ctx.container.removeEventListener('keyup', events.keyup);
+        }
       }
     },
     trash: function(options) {

@@ -22,11 +22,24 @@ module.exports = function(ctx) {
 
       return this;
     },
+
+    setEventManager: function(eventManager, eventContainer, getViewport, dragPan, setCursor) {
+      ctx.eventManager = eventManager;
+      ctx.eventContainer = eventContainer;
+      ctx.getViewport = getViewport;
+      ctx.dragPan = dragPan;
+      ctx.setCursor = setCursor;
+    },
+
     onAdd: function(map) {
       ctx.map = map;
       ctx.events = events(ctx);
       ctx.ui = ui(ctx);
-      ctx.container = map.getContainer();
+      if (ctx.eventContainer) {
+        ctx.container = ctx.eventContainer;
+      } else {
+        ctx.container = map.getContainer();
+      }
       ctx.store = new Store(ctx);
 
 

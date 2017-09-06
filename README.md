@@ -1,5 +1,98 @@
 # @mapbox/mapbox-gl-draw
 
+Modified to support use inside react-map-gl
+
+Example:
+```javascript
+//@flow
+import React from 'react';
+import ReactMapGL from 'react-map-gl';
+
+type Props {
+  viewport: {
+    latitude: number,
+    longitude: number,
+    zoom: number,
+    bearing?: number,
+    pitch?: number
+  }
+}
+
+type State {
+  dragPan: boolean
+}
+
+export default class MapWithDrawTools extends React.Component<Props, State> {
+
+  props: Props
+
+  state: {
+    dragPan: true
+  }
+
+reactMapLoaded(map){
+  const draw = new MapboxDraw({...});
+
+  draw.setEventManager(
+    this.refs.reactMapGl._eventManager, this.refs.reactMapGl._eventCanvas,
+    ()=>{
+      //function that returns the view props
+      return this.props.viewport;
+    },
+    (dragPan)=>{
+      _this.props.toggleDragPan(dragPan);
+    },
+    (cursor) =>{
+      //optionally override the default cursor choices
+      //To do so, set the pointer style on eventContainer
+    }
+  );
+
+  this.drawControlContainer = draw.onAdd(map);
+  document.getElementById('draw-controls').appendChild(this.drawControlContainer);
+
+  this.draw = draw;
+  this.map = map;
+
+  //now use draw and map as you normally would  
+
+  map.on('draw.create', () => {
+
+  });
+
+  map.on('draw.update', () => {
+
+  });
+
+  map.on('draw.delete', () => {
+
+  });
+
+}
+
+componentWillUnMount(){
+  this.draw.onRemove();
+}
+
+//needed to disable dragPan when dragging features or vertices in mapbox-gl-draw
+toggleDragPan(dragPan){
+  this.setState({dragPan});
+}
+
+render(){
+  return (
+    <div style={{position: 'relative'}}>
+    <ReactMapGL ref="reactGLMap"
+    dragPan={this.state.dragPan} 
+    onLoad={this.reactMapLoaded} />
+    <div id="draw-controls" style={{position: 'absolute', top: 0, right: '25px'}}>
+  )
+}
+}
+
+```
+
+
 [![Greenkeeper badge](https://badges.greenkeeper.io/mapbox/mapbox-gl-draw.svg)](https://greenkeeper.io/) [![Build Status](https://travis-ci.org/mapbox/mapbox-gl-draw.svg?branch=master)](https://travis-ci.org/mapbox/mapbox-gl-draw)
 
 Adds support for drawing and editing features on [mapbox-gl.js](https://www.mapbox.com/mapbox-gl-js/) maps. [See a live example here](https://www.mapbox.com/mapbox-gl-js/example/mapbox-gl-draw/)

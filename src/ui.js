@@ -37,6 +37,14 @@ module.exports = function(ctx) {
       classesToRemove.push(`${type}-${currentMapClasses[type]}`);
       if (nextMapClasses[type] !== null) {
         classesToAdd.push(`${type}-${nextMapClasses[type]}`);
+        if (type === 'mouse' && ctx.eventContainer) {
+          let cursor = nextMapClasses[type];
+          if (cursor === 'none') {
+            cursor = 'default';
+          }
+          ctx.eventContainer.style.cursor = cursor;
+          ctx.setCursor(nextMapClasses[type]);
+        }
       }
     });
 
