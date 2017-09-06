@@ -31,16 +31,17 @@ export default class MapWithDrawTools extends React.Component<Props, State> {
   }
 
 reactMapLoaded(map){
+  var _this = this;
   const draw = new MapboxDraw({...});
 
   draw.setEventManager(
     this.refs.reactMapGl._eventManager, this.refs.reactMapGl._eventCanvas,
     ()=>{
       //function that returns the view props
-      return this.props.viewport;
+      return _this.props.viewport;
     },
     (dragPan)=>{
-      _this.props.toggleDragPan(dragPan);
+      _this.toggleDragPan(dragPan);
     },
     (cursor) =>{
       //optionally override the default cursor choices
